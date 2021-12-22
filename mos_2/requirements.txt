@@ -1,0 +1,5 @@
+openpyxl
+beautifulsoup4==4.9.1
+lxml
+pywin32
+requests
