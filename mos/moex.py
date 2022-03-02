@@ -6,8 +6,11 @@ from openpyxl.styles import Alignment
 import os
 import requests
 
-# Функция отправки файла на почту
+
 def sander(file_name=None, adress=None):
+    """
+    Send function
+    """
     path = os.path.abspath(file_name)
     wb = openpyxl.load_workbook(path)
     sheet = wb['Лист1']
@@ -22,8 +25,10 @@ def sander(file_name=None, adress=None):
     mail.Attachments.Add(attachment)
     mail.Send()
 
-# Функция записи данных в файл Excel
+
 def rec_excl(dict_curr, currency):
+    """Record function in Excel"""
+
     path = os.path.abspath('Динамика.xlsx')
     wb = openpyxl.load_workbook(path)
     sheet = wb['Лист1']
@@ -39,34 +44,34 @@ def rec_excl(dict_curr, currency):
         cell_rate = 'E'
         cell_chang = 'F'
 
-    # Запись значений в ячейки + форматирование
+    # Record in Excel and document formatting
     for key in dict_curr:
         sheet.cell(row=row_count, column=1 + count_colm).value = key
-        # Форматирование
+
         sheet.cell(row=row_count, column=1 + count_colm).alignment = Alignment(horizontal='center')
         sheet.column_dimensions[cell_date].width = 14
 
         sheet.cell(row=row_count, column=2 + count_colm).value = dict_curr[key][0]
-        # Форматирование
+
         sheet.cell(row=row_count, column=2 + count_colm).number_format = '#,##0.00₽'
         sheet.cell(row=row_count, column=2 + count_colm).alignment = Alignment(horizontal='center')
         sheet.column_dimensions[cell_rate].width = 14
 
         sheet.cell(row=row_count, column=3 + count_colm).value = dict_curr[key][1]
-        # Форматирование
+
         sheet.cell(row=row_count, column=3 + count_colm).number_format = '#,##0.00₽'
         sheet.cell(row=row_count, column=3 + count_colm).alignment = Alignment(horizontal='center')
         sheet.column_dimensions[cell_chang].width = 14
         row_count += 1
 
     wb.save(path)
-    # Расчет отношения EUR/USD в столбце G, если все столбцы заполнены в таблице
+    # Calculate EUR/USD in column G, if all columns are field
     if sheet['B2'].value is not None and sheet['E2'].value is not None:
         for row in range(2, end_row+1):
             rate_USD = sheet.cell(row=row, column=2).value
             rate_EUR = sheet.cell(row=row, column=5).value
             sheet.cell(row=row, column=7).value = round(rate_EUR / rate_USD, 4)
-            # Форматирование
+            # Formatting
             sheet.cell(row=row, column=7).alignment = Alignment(horizontal='center')
             sheet.column_dimensions['G'].width = 14
 
@@ -78,42 +83,40 @@ def rec_excl(dict_curr, currency):
         count_row = end_row - 1
         return count_row
 
-# Функция для получения курса валют на заданный диапазон дат. Функция корректна при условии отсортированного курса в объекте soup: снача основной курс, потом промежуточный
 def curr_pars(path=None, params=None):
+    """Get the exchange rate for sorted data"""
+
     response = requests.get(path, params=params)
     soup = BeautifulSoup(response.content, "xml")
     res = soup.find_all('rate')
     formater = '%Y-%m-%d %H:%M:%S'
     dict_curr = {}
-    # Запись курса валют в словарь
+    # Record exchange rate in dictionary
     for i in res:
         curr_date = datetime.date(datetime.strptime(i['moment'], formater))
-        # Если дата в словаре уже существует
+        # If date in dictionary
         if curr_date in dict_curr:
             a = dict_curr[curr_date][0]
-            # округление курса до двух знаков
+            # Rounding to two decimal places
             b = round(float(i['value']), 2)
-            # округление разницы до двух знаков
             curr_value = round((a - b), 2)
             dict_curr[curr_date].append(curr_value)
-        # Запись даты в словарь с последним курсом
         else:
             dict_curr[curr_date] = [round(float(i['value']), 2)]
     return dict_curr
 
 
-# Функция для получения курса валют на заданные даты. Работает в условиях неотсортированного курса в оъекте soup.
 def curr_pars_ver2(path=None, params=None):
+    """Get the exchange rate for unsorted data"""
+
     response = requests.get(path, params=params)
     soup = BeautifulSoup(response.content, "xml")
     res = soup.find_all('rate')
     formater = '%Y-%m-%d %H:%M:%S'
     dict_curr = {}
     count = 0
-    # Запись курса валют в словарь
     for i in res:
         curr_date = datetime.date(datetime.strptime(i['moment'], formater))
-        # Если дата в словаре уже существует
         if curr_date in dict_curr:
             a = dict_curr[curr_date][0]
             b = round(float(i['value']), 2)
@@ -121,7 +124,7 @@ def curr_pars_ver2(path=None, params=None):
             dict_curr[curr_date].append(curr_value)
             date_old = res[count]['moment']
             date_new = i['moment']
-            # Если текущее время более позднее
+            # If current date later
             if date_new > date_old:
                 dict_curr[curr_date] = [round(float(i['value']), 2)]
                 dict_curr[curr_date].append(curr_value)
